@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soporte Técnico - Chevy Master</title>
+    <!-- Tailwind CSS desde CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div class="w-full max-w-lg bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-6 md:p-8">
+        
+        <!-- Encabezado / Branding -->
+        <div class="flex items-center justify-between border-b border-slate-700 pb-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-amber-500 tracking-wide">Chevy Master</h1>
+                <p class="text-xs text-slate-400">Asistencia Técnica en Taller</p>
+            </div>
+            <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs px-3 py-1 rounded-full font-semibold">
+                Soporte en Línea
+            </div>
+        </div>
+
+        <!-- Alerta de Respuesta -->
+        <div id="alertBox" class="hidden mb-4 p-4 rounded-xl text-sm font-medium"></div>
+
+        <!-- Formulario de Consulta -->
+        <form id="supportForm" class="space-y-4">
+            
+            <!-- ID del Mecánico -->
+            <div>
+                <label for="mechanicId" class="block text-sm font-medium text-slate-300 mb-1">ID del Mecánico</label>
+                <input type="text" id="mechanicId" required placeholder="Ej. MEC-04" 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
+            </div>
+
+            <!-- Marca y Modelo del Auto -->
+            <div>
+                <label for="carModel" class="block text-sm font-medium text-slate-300 mb-1">Marca y Modelo del Auto</label>
+                <input type="text" id="carModel" required placeholder="Ej. Chevrolet Chevy C2 2008" 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
+            </div>
+
+            <!-- Tipo de Soporte -->
+            <div>
+                <label for="supportType" class="block text-sm font-medium text-slate-300 mb-1">Categoría del Apoyo</label>
+                <select id="supportType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
+                    <option value="diagnostico">Asistencia en Diagnóstico / Escáner</option>
+                    <option value="mecanico">Apoyo Mecánico / Fuerza adicional</option>
+                    <option value="diagrama">Consulta de Diagrama / Información Técnica</option>
+                    <option value="refacciones">Confirmación de Refacción</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+
+            <!-- Descripción de la Falla con opción de Audio -->
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label for="issueDescription" class="block text-sm font-medium text-slate-300">Descripción de la Falla</label>
+                    <button type="button" id="recordAudioBtn" class="text-xs bg-slate-700 hover:bg-slate-600 text-amber-400 px-2.5 py-1 rounded-lg border border-slate-600 transition flex items-center space-x-1">
+                        <span id="micIcon">🎙️</span>
+                        <span id="recordText">Grabar por Voz</span>
+                    </button>
+                </div>
+                <textarea id="issueDescription" rows="3" required placeholder="Describe el problema, código DTC o dicta por voz..." 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition resize-none"></textarea>
+                <p id="audioStatus" class="text-xs text-amber-400/80 mt-1 hidden">🔴 Grabando audio... Habla ahora.</p>
+            </div>
+
+            <!-- Subir Fotos / Evidencia -->
+            <div>
+                <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos o Evidencia (Opcional)</label>
+                <input type="file" id="evidenceFiles" accept="image/*" multiple 
+                    class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-955 hover:file:bg-amber-600 file:cursor-pointer transition">
+            </div>
+
+            <!-- Botón de Envío -->
+            <button type="submit" id="submitBtn" 
+                class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform active:scale-95 flex items-center justify-center space-x-2">
+                <span id="btnText">Enviar Solicitud al Servidor</span>
+                <svg id="spinner" class="hidden animate-spin h-5 w-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </form>
+
+        <p class="text-xs text-center text-slate-500 mt-6">Sistema Interno Operativo — Chevy Master</p>
+    </div>
+
+    <script>
+        // URL completa de tu Webhook en n8n a través del túnel de Cloudflare
+        const WEBHOOK_URL = 'https://api.chevymaster.com.mx/webhook/soporte-taller';
+
+        const form = document.getElementById('supportForm');
+        const alertBox = document.getElementById('alertBox');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const recordAudioBtn = document.getElementById('recordAudioBtn');
+        const recordText = document.getElementById('recordText');
+        const audioStatus = document.getElementById('audioStatus');
+        const issueDescription = document.getElementById('issueDescription');
+
+        // Funcionalidad de Reconocimiento de Voz (Speech-to-Text integrado en navegadores modernos de móviles/PCs)
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-MX';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                audioStatus.classList.remove('hidden');
+                recordText.textContent = 'Escuchando...';
+            };
+
+            recognition.onresult = (event) => {
+                const speechToText = event.results[0][0].transcript;
+                issueDescription.value += (issueDescription.value ? ' ' : '') + speechToText;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Error en reconocimiento de voz:', event.error);
+                audioStatus.classList.add('hidden');
+                recordText.textContent = 'Grabar por Voz';
+            };
+
+            recognition.onend = () => {
+                audioStatus.classList.add('hidden');
+                recordText.textContent = 'Grabar por Voz';
+            };
+
+            recordAudioBtn.addEventListener('click', () => {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    recognition.stop();
+                }
+            });
+        } else {
+            recordAudioBtn.style.display = 'none'; // Ocultar si el navegador no lo soporta
+        }
+
+        // Envío de datos al Webhook
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            hideAlert();
+
+            const mechanicId = document.getElementById('mechanicId').value;
+            const carModel = document.getElementById('carModel').value;
+            const supportType = document.getElementById('supportType').value;
+            const issue = issueDescription.value;
+            const fileInput = document.getElementById('evidenceFiles');
+
+            // Preparar objeto de envío (en formato JSON o FormData si manejas archivos binarios)
+            const payload = {
+                mechanic_id: mechanicId,
+                car_model: carModel,
+                category: supportType,
+                description: issue,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    showAlert('¡Solicitud enviada con éxito! El sistema validará tu ID y procesará el caso.', 'success');
+                    form.reset();
+                } else {
+                    showAlert('El servidor no pudo procesar la solicitud. Revisa el ID.', 'error');
+                }
+            } catch (error) {
+                console.error('Error enviando solicitud:', error);
+                showAlert('Error de red o problema con el túnel Cloudflare.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                submitBtn.disabled = true;
+                btnText.textContent = 'Transmitiendo...';
+                spinner.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Enviar Solicitud al Servidor';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30', 'bg-rose-500/10', 'text-rose-400', 'border-rose-500/30');
+            
+            if (type === 'success') {
+                alertBox.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/30');
+            } else {
+                alertBox.classList.add('bg-rose-500/10', 'text-rose-400', 'border', 'border-rose-500/30');
+            }
+        }
+
+        function hideAlert() {
+            alertBox.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
+
