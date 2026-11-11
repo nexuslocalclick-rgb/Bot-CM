@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Soporte Técnico - Chevy Master</title>
-    <!-- Tailwind CSS desde CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
 
     <div class="w-full max-w-lg bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-6 md:p-8">
         
-        <!-- Encabezado / Branding -->
         <div class="flex items-center justify-between border-b border-slate-700 pb-4 mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-amber-500 tracking-wide">Chevy Master</h1>
@@ -22,27 +20,22 @@
             </div>
         </div>
 
-        <!-- Alerta de Respuesta -->
         <div id="alertBox" class="hidden mb-4 p-4 rounded-xl text-sm font-medium"></div>
 
-        <!-- Formulario de Consulta -->
         <form id="supportForm" class="space-y-4">
             
-            <!-- ID del Mecánico -->
             <div>
                 <label for="mechanicId" class="block text-sm font-medium text-slate-300 mb-1">ID del Mecánico</label>
                 <input type="text" id="mechanicId" required placeholder="Ej. MEC-04" 
                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
             </div>
 
-            <!-- Marca y Modelo del Auto -->
             <div>
                 <label for="carModel" class="block text-sm font-medium text-slate-300 mb-1">Marca y Modelo del Auto</label>
                 <input type="text" id="carModel" required placeholder="Ej. Chevrolet Chevy C2 2008" 
                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
             </div>
 
-            <!-- Tipo de Soporte -->
             <div>
                 <label for="supportType" class="block text-sm font-medium text-slate-300 mb-1">Categoría del Apoyo</label>
                 <select id="supportType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
@@ -54,7 +47,6 @@
                 </select>
             </div>
 
-            <!-- Descripción de la Falla con opción de Audio -->
             <div>
                 <div class="flex justify-between items-center mb-1">
                     <label for="issueDescription" class="block text-sm font-medium text-slate-300">Descripción de la Falla</label>
@@ -68,14 +60,12 @@
                 <p id="audioStatus" class="text-xs text-amber-400/80 mt-1 hidden">🔴 Grabando audio... Habla ahora.</p>
             </div>
 
-            <!-- Subir Fotos / Evidencia -->
             <div>
                 <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos o Evidencia (Opcional)</label>
                 <input type="file" id="evidenceFiles" accept="image/*" multiple 
                     class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 file:cursor-pointer transition">
             </div>
 
-            <!-- Botón de Envío -->
             <button type="submit" id="submitBtn" 
                 class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform active:scale-95 flex items-center justify-center space-x-2">
                 <span id="btnText">Enviar Solicitud al Servidor</span>
@@ -93,15 +83,8 @@
         // ==========================================
         // CONFIGURACIÓN DE ENTORNOS
         // ==========================================
-        const URL_UAT = 'https://core.localclick.com.mx/webhook-test/cliente';
-        const URL_PROD = 'https://core.localclick.com.mx/webhook/cliente';
-        
-        // YA ESTÁ EN PRODUCCIÓN
-        const ENTORNO_ACTUAL = 'PROD'; 
-        
-        const WEBHOOK_URL = ENTORNO_ACTUAL === 'PROD' ? URL_PROD : URL_UAT;
-
-        // ==========================================
+        // APUNTANDO DIRECTO A PRODUCCIÓN
+        const WEBHOOK_URL = 'https://core.localclick.com.mx/webhook/cliente';
 
         const form = document.getElementById('supportForm');
         const alertBox = document.getElementById('alertBox');
@@ -112,6 +95,7 @@
         const recordText = document.getElementById('recordText');
         const audioStatus = document.getElementById('audioStatus');
         const issueDescription = document.getElementById('issueDescription');
+        const evidenceFiles = document.getElementById('evidenceFiles');
 
         // Funcionalidad de Reconocimiento de Voz
         let recognition = null;
@@ -154,44 +138,58 @@
             recordAudioBtn.style.display = 'none'; 
         }
 
-        // Envío de datos al Webhook (Multipart/Form-Data para soportar imágenes)
+        // Función mágica: Convierte las fotos a texto para que no fallen por CORS
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Envío de datos al Webhook
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             setLoading(true);
             hideAlert();
 
-            // Usamos FormData para enviar texto y archivos juntos
-            const formData = new FormData();
-            formData.append('mechanic_id', document.getElementById('mechanicId').value);
-            formData.append('car_model', document.getElementById('carModel').value);
-            formData.append('category', document.getElementById('supportType').value);
-            formData.append('description', issueDescription.value);
-            formData.append('timestamp', new Date().toISOString());
-
-            // Si hay archivos, los adjuntamos
-            const fileInput = document.getElementById('evidenceFiles');
-            if (fileInput.files.length > 0) {
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    formData.append('files', fileInput.files[i]); // n8n los agrupará en un array
-                }
-            }
+            // Preparamos el JSON
+            const payload = {
+                mechanic_id: document.getElementById('mechanicId').value,
+                car_model: document.getElementById('carModel').value,
+                category: document.getElementById('supportType').value,
+                description: issueDescription.value,
+                timestamp: new Date().toISOString(),
+                images: [] 
+            };
 
             try {
-                // Método POST
+                // Procesamos las fotos a texto
+                if (evidenceFiles.files.length > 0) {
+                    for (let i = 0; i < evidenceFiles.files.length; i++) {
+                        const base64Image = await fileToBase64(evidenceFiles.files[i]);
+                        payload.images.push(base64Image);
+                    }
+                }
+
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    body: formData // Al usar FormData, NO ponemos Content-Type manualmente
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
-                    showAlert('¡Solicitud enviada con éxito! El sistema validará tu ID y procesará el caso.', 'success');
+                    showAlert('¡Solicitud enviada con éxito!', 'success');
                     form.reset();
                 } else {
-                    showAlert('El servidor de n8n respondió con un error (' + response.status + '). Revisa que el flujo esté activo.', 'error');
+                    showAlert('El servidor de n8n respondió con un error (' + response.status + ').', 'error');
                 }
             } catch (error) {
                 console.error('Error enviando solicitud:', error);
-                showAlert('Error de red. Posible bloqueo de CORS en n8n o el túnel está caído.', 'error');
+                showAlert('Error de red. Posible bloqueo de CORS o túnel caído.', 'error');
             } finally {
                 setLoading(false);
             }
