@@ -68,11 +68,11 @@
                 <p id="audioStatus" class="text-xs text-amber-400/80 mt-1 hidden">🔴 Grabando audio... Habla ahora.</p>
             </div>
 
-            <!-- Subir Fotos / Evidencia -->
-            <div>
-                <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos o Evidencia (Opcional)</label>
-                <input type="file" id="evidenceFiles" accept="image/*" multiple 
-                    class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-955 hover:file:bg-amber-600 file:cursor-pointer transition">
+            <!-- Subir Fotos / Evidencia (Opcional - Deshabilitado temporalmente para pruebas de texto) -->
+            <div class="opacity-50">
+                <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos (Próximamente)</label>
+                <input type="file" id="evidenceFiles" accept="image/*" multiple disabled
+                    class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-600 file:text-slate-300 cursor-not-allowed">
             </div>
 
             <!-- Botón de Envío -->
@@ -90,8 +90,18 @@
     </div>
 
     <script>
-        // URL completa de tu Webhook en n8n a través del túnel de Cloudflare
-        const WEBHOOK_URL = 'https://api.chevymaster.com.mx/webhook/soporte-taller';
+        // ==========================================
+        // CONFIGURACIÓN DE ENTORNOS
+        // ==========================================
+        const URL_UAT = 'https://core.localclick.com.mx/webhook-test/cliente';
+        const URL_PROD = 'https://core.localclick.com.mx/webhook/cliente';
+        
+        // CAMBIA AQUÍ: Pon 'UAT' para probar o 'PROD' cuando ya esté listo
+        const ENTORNO_ACTUAL = 'UAT'; 
+        
+        const WEBHOOK_URL = ENTORNO_ACTUAL === 'PROD' ? URL_PROD : URL_UAT;
+
+        // ==========================================
 
         const form = document.getElementById('supportForm');
         const alertBox = document.getElementById('alertBox');
@@ -103,7 +113,7 @@
         const audioStatus = document.getElementById('audioStatus');
         const issueDescription = document.getElementById('issueDescription');
 
-        // Funcionalidad de Reconocimiento de Voz (Speech-to-Text integrado en navegadores modernos de móviles/PCs)
+        // Funcionalidad de Reconocimiento de Voz
         let recognition = null;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -141,31 +151,26 @@
                 }
             });
         } else {
-            recordAudioBtn.style.display = 'none'; // Ocultar si el navegador no lo soporta
+            recordAudioBtn.style.display = 'none'; 
         }
 
-        // Envío de datos al Webhook
+        // Envío de datos al Webhook (Formato JSON)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             setLoading(true);
             hideAlert();
 
-            const mechanicId = document.getElementById('mechanicId').value;
-            const carModel = document.getElementById('carModel').value;
-            const supportType = document.getElementById('supportType').value;
-            const issue = issueDescription.value;
-            const fileInput = document.getElementById('evidenceFiles');
-
-            // Preparar objeto de envío (en formato JSON o FormData si manejas archivos binarios)
+            // Preparamos el JSON con los datos
             const payload = {
-                mechanic_id: mechanicId,
-                car_model: carModel,
-                category: supportType,
-                description: issue,
+                mechanic_id: document.getElementById('mechanicId').value,
+                car_model: document.getElementById('carModel').value,
+                category: document.getElementById('supportType').value,
+                description: issueDescription.value,
                 timestamp: new Date().toISOString()
             };
 
             try {
+                // Método POST y envío de JSON
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 
@@ -178,11 +183,11 @@
                     showAlert('¡Solicitud enviada con éxito! El sistema validará tu ID y procesará el caso.', 'success');
                     form.reset();
                 } else {
-                    showAlert('El servidor no pudo procesar la solicitud. Revisa el ID.', 'error');
+                    showAlert('El servidor de n8n respondió con un error (' + response.status + '). Revisa que el flujo esté activo.', 'error');
                 }
             } catch (error) {
                 console.error('Error enviando solicitud:', error);
-                showAlert('Error de red o problema con el túnel Cloudflare.', 'error');
+                showAlert('Error de red. Posible bloqueo de CORS en n8n o el túnel está caído.', 'error');
             } finally {
                 setLoading(false);
             }
@@ -217,4 +222,3 @@
     </script>
 </body>
 </html>
-
