@@ -68,11 +68,11 @@
                 <p id="audioStatus" class="text-xs text-amber-400/80 mt-1 hidden">🔴 Grabando audio... Habla ahora.</p>
             </div>
 
-            <!-- Subir Fotos / Evidencia (Opcional - Deshabilitado temporalmente para pruebas de texto) -->
-            <div class="opacity-50">
-                <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos (Próximamente)</label>
-                <input type="file" id="evidenceFiles" accept="image/*" multiple disabled
-                    class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-600 file:text-slate-300 cursor-not-allowed">
+            <!-- Subir Fotos / Evidencia -->
+            <div>
+                <label for="evidenceFiles" class="block text-sm font-medium text-slate-300 mb-1">Adjuntar Fotos o Evidencia (Opcional)</label>
+                <input type="file" id="evidenceFiles" accept="image/*" multiple 
+                    class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 file:cursor-pointer transition">
             </div>
 
             <!-- Botón de Envío -->
@@ -154,29 +154,33 @@
             recordAudioBtn.style.display = 'none'; 
         }
 
-        // Envío de datos al Webhook (Formato JSON)
+        // Envío de datos al Webhook (Multipart/Form-Data para soportar imágenes)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             setLoading(true);
             hideAlert();
 
-            // Preparamos el JSON con los datos
-            const payload = {
-                mechanic_id: document.getElementById('mechanicId').value,
-                car_model: document.getElementById('carModel').value,
-                category: document.getElementById('supportType').value,
-                description: issueDescription.value,
-                timestamp: new Date().toISOString()
-            };
+            // Usamos FormData para enviar texto y archivos juntos
+            const formData = new FormData();
+            formData.append('mechanic_id', document.getElementById('mechanicId').value);
+            formData.append('car_model', document.getElementById('carModel').value);
+            formData.append('category', document.getElementById('supportType').value);
+            formData.append('description', issueDescription.value);
+            formData.append('timestamp', new Date().toISOString());
+
+            // Si hay archivos, los adjuntamos
+            const fileInput = document.getElementById('evidenceFiles');
+            if (fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files', fileInput.files[i]); // n8n los agrupará en un array
+                }
+            }
 
             try {
-                // Método POST y envío de JSON
+                // Método POST (asegúrate de tenerlo en POST en n8n)
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify(payload)
+                    body: formData // Al usar FormData, NO ponemos Content-Type manualmente
                 });
 
                 if (response.ok) {
