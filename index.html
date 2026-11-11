@@ -96,7 +96,7 @@
         const URL_UAT = 'https://core.localclick.com.mx/webhook-test/cliente';
         const URL_PROD = 'https://core.localclick.com.mx/webhook/cliente';
         
-        // CAMBIA AQUÍ: Pon 'UAT' para probar o 'PROD' cuando ya esté listo
+        // CAMBIA AQUÍ: Pon 'UAT' para probar en vivo o 'PROD' para producción
         const ENTORNO_ACTUAL = 'UAT'; 
         
         const WEBHOOK_URL = ENTORNO_ACTUAL === 'PROD' ? URL_PROD : URL_UAT;
@@ -112,6 +112,7 @@
         const recordText = document.getElementById('recordText');
         const audioStatus = document.getElementById('audioStatus');
         const issueDescription = document.getElementById('issueDescription');
+        const evidenceFiles = document.getElementById('evidenceFiles');
 
         // Funcionalidad de Reconocimiento de Voz
         let recognition = null;
@@ -154,40 +155,54 @@
             recordAudioBtn.style.display = 'none'; 
         }
 
-        // Envío de datos al Webhook (Multipart/Form-Data para soportar imágenes)
+        // Función para convertir la imagen a Base64 (Para que n8n la lea como texto)
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Envío de datos al Webhook
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             setLoading(true);
             hideAlert();
 
-            // Usamos FormData para enviar texto y archivos juntos
-            const formData = new FormData();
-            formData.append('mechanic_id', document.getElementById('mechanicId').value);
-            formData.append('car_model', document.getElementById('carModel').value);
-            formData.append('category', document.getElementById('supportType').value);
-            formData.append('description', issueDescription.value);
-            formData.append('timestamp', new Date().toISOString());
-
-            // Si hay archivos, los adjuntamos
-            const fileInput = document.getElementById('evidenceFiles');
-            if (fileInput.files.length > 0) {
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    formData.append('files', fileInput.files[i]); // n8n los agrupará en un array
-                }
-            }
+            const payload = {
+                mechanic_id: document.getElementById('mechanicId').value,
+                car_model: document.getElementById('carModel').value,
+                category: document.getElementById('supportType').value,
+                description: issueDescription.value,
+                timestamp: new Date().toISOString(),
+                images: [] // Aquí guardaremos las fotos en Base64
+            };
 
             try {
-                // Método POST (asegúrate de tenerlo en POST en n8n)
+                // Si hay fotos, las procesamos a Base64
+                if (evidenceFiles.files.length > 0) {
+                    for (let i = 0; i < evidenceFiles.files.length; i++) {
+                        const base64Image = await fileToBase64(evidenceFiles.files[i]);
+                        payload.images.push(base64Image);
+                    }
+                }
+
+                // Enviamos todo como JSON puro y duro
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    body: formData // Al usar FormData, NO ponemos Content-Type manualmente
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
                     showAlert('¡Solicitud enviada con éxito! El sistema validará tu ID y procesará el caso.', 'success');
                     form.reset();
                 } else {
-                    showAlert('El servidor de n8n respondió con un error (' + response.status + '). Revisa que el flujo esté activo.', 'error');
+                    showAlert('El servidor de n8n respondió con un error (' + response.status + '). Revisa que el flujo esté activo (Publish).', 'error');
                 }
             } catch (error) {
                 console.error('Error enviando solicitud:', error);
