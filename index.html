@@ -20,7 +20,8 @@
             </div>
         </div>
 
-        <div id="alertBox" class="hidden mb-4 p-4 rounded-xl text-sm font-medium"></div>
+        <!-- Aquí se mostrará la respuesta de la IA (agregamos whitespace-pre-wrap para respetar saltos de línea) -->
+        <div id="alertBox" class="hidden mb-4 p-4 rounded-xl text-sm font-medium whitespace-pre-wrap"></div>
 
         <form id="supportForm" class="space-y-4">
             
@@ -83,7 +84,6 @@
         // ==========================================
         // CONFIGURACIÓN DE ENTORNOS
         // ==========================================
-        // APUNTANDO DIRECTO A PRODUCCIÓN
         const WEBHOOK_URL = 'https://core.localclick.com.mx/webhook/cliente';
 
         const form = document.getElementById('supportForm');
@@ -138,7 +138,7 @@
             recordAudioBtn.style.display = 'none'; 
         }
 
-        // Función mágica: Convierte las fotos a texto para que no fallen por CORS
+        // Convertir fotos a Base64
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -154,7 +154,6 @@
             setLoading(true);
             hideAlert();
 
-            // Preparamos el JSON
             const payload = {
                 mechanic_id: document.getElementById('mechanicId').value,
                 car_model: document.getElementById('carModel').value,
@@ -165,7 +164,6 @@
             };
 
             try {
-                // Procesamos las fotos a texto
                 if (evidenceFiles.files.length > 0) {
                     for (let i = 0; i < evidenceFiles.files.length; i++) {
                         const base64Image = await fileToBase64(evidenceFiles.files[i]);
@@ -182,8 +180,27 @@
                 });
 
                 if (response.ok) {
-                    showAlert('¡Solicitud enviada con éxito!', 'success');
-                    form.reset();
+                    // NUEVO: Leemos la respuesta que viene de n8n
+                    const responseText = await response.text();
+                    let finalMessage = "¡Solicitud enviada con éxito!";
+                    
+                    try {
+                        // Intentamos ver si n8n lo mandó como JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        // Dependiendo de cómo esté configurado n8n, el texto puede venir en 'output', 'text' o directo
+                        finalMessage = jsonResponse.output || jsonResponse.text || jsonResponse.message || responseText;
+                    } catch (err) {
+                        // Si no es JSON, es texto plano, lo usamos directo
+                        finalMessage = responseText;
+                    }
+
+                    // Mostramos el diagnóstico de la IA en la página
+                    showAlert(finalMessage, 'success');
+                    
+                    // Hacemos scroll hacia arriba para que el usuario vea la respuesta
+                    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // form.reset(); // Descomenta esto si quieres que se limpie el form después de responder
                 } else {
                     showAlert('El servidor de n8n respondió con un error (' + response.status + ').', 'error');
                 }
@@ -198,7 +215,7 @@
         function setLoading(isLoading) {
             if (isLoading) {
                 submitBtn.disabled = true;
-                btnText.textContent = 'Transmitiendo...';
+                btnText.textContent = 'Analizando diagnóstico...';
                 spinner.classList.remove('hidden');
             } else {
                 submitBtn.disabled = false;
